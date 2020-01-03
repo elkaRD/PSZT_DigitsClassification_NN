@@ -11,6 +11,9 @@
 #include <iostream>
 using namespace std;
 
+const int NeuralNetworkManager::INPUT_NEURONS = 1;
+const int NeuralNetworkManager::OUTPUT_NEURONS = 1;
+
 NeuralNetworkManager::NeuralNetworkManager(std::vector<int> hiddenLayers)
 {
 //    std::vector<matrix<double>> a;
@@ -21,11 +24,12 @@ NeuralNetworkManager::NeuralNetworkManager(std::vector<int> hiddenLayers)
     
     cout << "CONSTRUCTOR" << endl;
     
-    srand((unsigned)time(NULL));
+    //srand((unsigned)time(NULL));
+    srand(0.111);
     
-    this->hiddenLayers = hiddenLayers;
-    hiddenLayers.push_back(10);
+    hiddenLayers.push_back(OUTPUT_NEURONS);
     hiddenLayersSize = hiddenLayers.size();
+    this->hiddenLayers = hiddenLayers;
     
     a.clear();
     w.clear();
@@ -71,7 +75,7 @@ NeuralNetworkManager::NeuralNetworkManager(std::vector<int> hiddenLayers)
     
     for (size_t i = 0; i < hiddenLayers.size(); ++i)
     {
-        int prevLayer = i == 0 ? 28*28 : hiddenLayers[i-1];
+        int prevLayer = i == 0 ? INPUT_NEURONS : hiddenLayers[i-1];
         int curLayer = hiddenLayers[i];
         //matrix<double> tempW(curLayer, prevLayer);
         matrix<double> tempW(prevLayer, curLayer);
@@ -97,7 +101,9 @@ double NeuralNetworkManager::randomValue()
 
 int NeuralNetworkManager::detectDigit(std::vector<double> image)
 {
-    if (image.size() != 28*28) throw std::exception();
+    if (image.size() != INPUT_NEURONS) throw std::exception();
+    
+    debugDisplayParams();
     
     matrix<double> debug = forward(image);
     
@@ -105,17 +111,20 @@ int NeuralNetworkManager::detectDigit(std::vector<double> image)
     
     learn(image, 0);
     
+    //debugDisplayParams();
+    debugDisplayCalculated();
+    
     return 0;
 }
 
 int NeuralNetworkManager::detectDigitInt8(std::vector<uint8_t> image)
 {
-    if (image.size() != 28*28) throw std::exception();
+    if (image.size() != INPUT_NEURONS) throw std::exception();
     
     std::vector<double> temp;
-    temp.reserve(28 * 28);
+    temp.reserve(INPUT_NEURONS);
     
-    for (int i = 0; i < 28*28; ++i)
+    for (int i = 0; i < INPUT_NEURONS; ++i)
     {
         double d = image[i];
         d /= 255.0;
@@ -129,20 +138,60 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
 {
     matrix<double> output = forward(image);
     
-    matrix<double> in(1, 28*28);
+    matrix<double> in(1, INPUT_NEURONS);
     
-    for (int i = 0; i < 28*28; ++i)
+    for (int i = 0; i < INPUT_NEURONS; ++i)
         in(0, i) = image[i];
     
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < OUTPUT_NEURONS; ++i)
     {
         double desired = i == expected ? 1 : 0;
         dca[hiddenLayersSize-1] (0, i) = 2 * (output(0, i) - desired);
     }
-    cout << "learn: " << dca[hiddenLayersSize-1] << endl;
+    //cout << "learn DCA: " << dca[hiddenLayersSize-1] << endl;
     
     for (int i = hiddenLayersSize-1; i >= 0; --i)
     {
+        for (int j = 0; j < hiddenLayers[i]; ++j)
+        {
+            dcb[i](0, j) = dSigmoid(z[i](0, j)) * dca[i](0, j);
+        }
+        
+        for (int j = 0; j < hiddenLayers[i]; ++j)
+        {
+            matrix<double> leftNeurons = j == 0 ? in : a[i-1];
+            for (int k = 0; k < leftNeurons.size2(); k++)
+            {
+                dcw[i](j, k) = leftNeurons(0, k) * dSigmoid(z[i](0, j)) * dca[i](0, j);
+            }
+        }
+        
+        if (i == 0) break;
+        
+        
+        for (int j = 0; j < hiddenLayers[i-1]; ++j)
+        {
+            dca[i-1](0, j) = 0;
+            for (int k = 0; k < hiddenLayers[i]; ++k)
+            {
+                cout << "testnig: " << w[i](j, k) << ", " << dSigmoid(z[i](0, k)) << ", " << dca[i](0, k) << ",        " << z[i](0, k) << endl;
+                dca[i-1](0, j) += w[i](j, k) * dSigmoid(z[i](0, k)) * dca[i](0, k);
+            }
+        }
+    }
+    
+    for (int i = 0; i < hiddenLayersSize; ++i)
+    {
+        w[i] -= dcw[i] * 0.00001;
+        b[i] -= dcb[i] * 0.00001;
+    }
+    
+    return;
+    
+    for (int i = hiddenLayersSize-1; i >= 0; --i)
+    {
+        cout << "DCA: " << dca[i] << endl;
+        
         //dcb[i] = dSigmoid(z[i]) * dca[i];
         dcb[i] = prod(dca[i], toDiagonal(dSigmoid(z[i])));
 
@@ -156,16 +205,32 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
         if (i != 0)cout << "toDiagonal(prevLayer): " << toDiagonal(prevLayer) << endl;
             //cout << "toDiagonal(prevLayer): " << toDiagonal(prevLayer).size1() << " x " << toDiagonal(prevLayer).size2() << endl;
         
-        dcw[i] = prod(toDiagonal(prevLayer), sameRows(tempDcw, prevLayer.size2()));
+        //dcw[i] = prod(toDiagonal(prevLayer), sameRows(tempDcw, prevLayer.size2()));
         
         if (i == 0) break;
         
-        matrix<double> tempDca = prod(dca[i], toDiagonal(dSigmoid(z[i])));
         
-        cout << "debug2_1: " << w[i].size1() << " x " << w[i].size2() << endl;
-        cout << "debug2_2: " << tempDca.size1() << " x " << tempDca.size2() << endl;
         
-        dca[i-1] = prod(tempDca, trans(w[i]));
+//        cout << "debug2_1: " << w[i].size1() << " x " << w[i].size2() << endl;
+//        cout << "debug2_2: " << tempDca.size1() << " x " << tempDca.size2() << endl;
+        
+        //matrix<double> tempDca = prod(dca[i], toDiagonal(dSigmoid(z[i])));  //MATRIX VERSION
+        //dca[i-1] = prod(tempDca, trans(w[i]));    //MATRIX VERSION
+        
+//        for (int j = 0; j < hiddenLayers[i-1]; ++j)
+//        {
+//            dca[i-1](0, j) = 0;
+//            for (int k = 0; k < hiddenLayers[i]; ++k)
+//            {
+//                cout << "jk: " << j << ",  " << k << endl;
+//                cout << "w: " << w[i](j, k) << endl;
+//                cout << "dsig: " << dSigmoid(z[i](0, k)) << endl;
+//                cout << "dca: " << dca[i](0, k) << endl;
+//                dca[i-1](0, j) += w[i](j, k) * dSigmoid(z[i](0, k)) * dca[i](0, k);
+//            }
+//            //dca[i-1](0, j) = w[i](j, )
+//        }
+        
         //matrix<double> f = prod(w[i], tempDca);
 //        matrix<double> f = prod(tempDca, w[i]);
         //cout << "debug2_3: " << w[i] << endl; //prod(tempDca, w[i]) << endl;
@@ -173,7 +238,7 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
     
     for (int i = 0; i < hiddenLayersSize; ++i)
     {
-        int prevLayer = i == 0 ? 28*28 : hiddenLayers[i-1];
+        int prevLayer = i == 0 ? INPUT_NEURONS : hiddenLayers[i-1];
         int curLayer = hiddenLayers[i];
 
 //        for (int x = 0; x < curLayer; ++x)
@@ -186,19 +251,16 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
         w[i] += dcw[i] * 0.001;
         b[i] += dcb[i] * 0.001;
         
-        cout << "DCW: " << dcw[i] << endl;
+        //cout << "DCW: " << dcw[i] << endl;
     }
 }
 
 matrix<double> NeuralNetworkManager::forward(std::vector<double> input)
 {
-    matrix<double> in(1, 28*28);
+    matrix<double> in(1, INPUT_NEURONS);
     
-    for (int i = 0; i < 28*28; ++i)
+    for (int i = 0; i < INPUT_NEURONS; ++i)
         in(0, i) = input[i];
-    
-    cout << "debug: " << w[0].size1() << " x " << w[0].size2() << endl;
-    cout << "debug: " << in.size1() << "x " << in.size2() << endl;
     
     z[0] = prod(in, w[0]);
     z[0] += b[0];
@@ -274,4 +336,60 @@ matrix<double> NeuralNetworkManager::sameRows(const matrix<double> &m, const int
     }
     
     return temp;
+}
+
+void NeuralNetworkManager::debugDisplayParams()
+{
+    cout << "DEBUG DISPLAY PARAMS START" << endl;
+    
+    for (int i = 0; i < hiddenLayersSize; ++i)
+    {
+        cout << endl;
+        cout << "LAYER " << i << endl;
+        cout << endl;
+        
+        cout << "BIASES:" << b[i] << endl;
+//        for (int j = 0; j < hiddenLayers[i]; ++j)
+//        {
+//            cout << j << ": " << b[i](0, j) << endl;
+//        }
+        
+        cout << endl;
+        cout << "WEIGHTS: " << w[i] << endl;
+        //matrix<double> prevLayer = i == 0 ?
+    }
+    
+    cout << "DEBUG DISPLAY PARAMS END" << endl;
+}
+
+void NeuralNetworkManager::debugDisplayCalculated()
+{
+    cout << "DEBUG DISPLAY CALCULATED START" << endl;
+    
+    for (int i = 0; i < hiddenLayersSize; ++i)
+    {
+        cout << endl;
+        cout << "LAYER " << i << endl;
+        
+        cout << endl;
+        cout << "A:" << a[i] << endl;
+//        for (int j = 0; j < hiddenLayers[i]; ++j)
+//        {
+//            cout << j << ": " << b[i](0, j) << endl;
+//        }
+        
+        cout << endl;
+        cout << "Z: " << z[i] << endl;
+        
+        cout << endl;
+        cout << "DCA: " << dca[i] << endl;
+        
+        cout << endl;
+        cout << "DCB: " << dcb[i] << endl;
+        
+        cout << endl;
+        cout << "DCW: " << dcw[i] << endl;
+    }
+    
+    cout << "DEBUG DISPLAY CALCULATED END" << endl;
 }

@@ -28,6 +28,9 @@ public:
     
 private:
     
+    const static int INPUT_NEURONS;
+    const static int OUTPUT_NEURONS;
+    
     class Layer
     {
         
@@ -59,6 +62,9 @@ private:
     
     matrix<double> toDiagonal(const matrix<double> &m);
     matrix<double> sameRows(const matrix<double> &m, const int rows);
+    
+    void debugDisplayParams();
+    void debugDisplayCalculated();
 };
 
 #endif /* NeuralNetworkManager_hpp */
