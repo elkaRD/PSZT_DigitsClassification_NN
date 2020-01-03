@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
 //            nn.detectDigitInt8(dataset.training_images[0]);
 //    }
     {
-        NeuralNetworkManager nn({1,1});
-        for (int i = 0; i < 3000; ++i)
-            nn.detectDigit({0.2});
+        NeuralNetworkManager nn({20, 20});
+        for (int i = 0; i < 300; ++i)
+            nn.detectDigit({0.2, 0.6});
     }
 
     return 0;
