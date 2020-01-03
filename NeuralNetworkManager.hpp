@@ -24,6 +24,8 @@ public:
     int detectDigit(std::vector<double> image);
     int detectDigitInt8(std::vector<uint8_t> image);
     
+    void learn(std::vector<double> image, int expected);
+    
 private:
     
     class Layer
@@ -35,12 +37,15 @@ private:
 //    matrix<double> expecteddutput;
     
     int hiddenLayersSize;
+    std::vector<int> hiddenLayers;
     
     std::vector<matrix<double>> a;
     std::vector<matrix<double>> w;
     std::vector<matrix<double>> b;
     std::vector<matrix<double>> z;
     std::vector<matrix<double>> dca;
+    std::vector<matrix<double>> dcb;
+    std::vector<matrix<double>> dcw;
     
     double randomValue();
     
@@ -51,6 +56,9 @@ private:
     
     matrix<double> sigmoid(matrix<double> &m);
     matrix<double> dSigmoid(matrix<double> &m);
+    
+    matrix<double> toDiagonal(const matrix<double> &m);
+    matrix<double> sameRows(const matrix<double> &m, const int rows);
 };
 
 #endif /* NeuralNetworkManager_hpp */

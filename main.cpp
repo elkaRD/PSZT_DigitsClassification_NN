@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     
     //vector<int> layers = {16, 16};
     
-    NeuralNetworkManager nn({16, 16});
+    NeuralNetworkManager nn({16, 14});
     
     nn.detectDigitInt8(dataset.training_images[0]);
 
