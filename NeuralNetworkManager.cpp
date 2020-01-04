@@ -99,17 +99,33 @@ double NeuralNetworkManager::randomValue()
     return ((double)rand() / (double)RAND_MAX);
 }
 
+static int s;
+
 int NeuralNetworkManager::detectDigit(std::vector<double> image)
 {
     if (image.size() != INPUT_NEURONS) throw std::exception();
     
     //debugDisplayParams();
     
+    s++;
+    
     matrix<double> debug = forward(image);
     
-    cout << "result of forward: " << debug << endl;
+    
+    
+    
+    
+    
+    cout << s << " result of forward: " << debug << endl;
     
     learn(image, 0);
+    
+    
+    if (s >= 140)
+    {
+        //cout << "HERE" << endl;
+        //debugDisplayCalculated();
+    }
     
     //debugDisplayParams();
     //debugDisplayCalculated();
@@ -149,13 +165,23 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
         //cout << "desired: " << desired << endl;
         dca[hiddenLayersSize-1] (0, i) = 2 * (output(0, i) - desired);
     }
+    
+    //if (s >= 140) cout << s << "forward: " << output << ",    DCA: " << dca[hiddenLayersSize-1] << endl;
+    
     //cout << "learn DCA: " << dca[hiddenLayersSize-1] << endl;
     
     for (int i = hiddenLayersSize-1; i >= 0; --i)
     {
         for (int j = 0; j < hiddenLayers[i]; ++j)
         {
+            double temp = dcb[i](0, j);
             dcb[i](0, j) = dSigmoid(z[i](0, j)) * dca[i](0, j);
+            if (isnan(dcb[i](0, j)) && !isnan(temp))
+            {
+                cout << "DCB PROBLEM'S HERE" << endl;
+                cout << "s: " << s << ",  i,j: " << i << ", " << j << endl;
+                cout << "dsigmoid: " << dSigmoid(z[i](0, j)) << ",    dca: " << dca[i](0, j) << endl;
+            }
         }
         
         for (int j = 0; j < hiddenLayers[i]; ++j)
@@ -168,7 +194,13 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
                 //cout << leftNeurons(0, k) << endl;
                 //cout << dSigmoid(z[i](0, j)) << endl;
                 //cout << dca[i](0, j) << endl;
+                double temp = dcw[i](k, j);
                 dcw[i](k, j) = leftNeurons(0, k) * dSigmoid(z[i](0, j)) * dca[i](0, j);
+                if (isnan(dcw[i](k, j)) && !isnan(temp))
+                {
+                    cout << "W PROBLEM" << endl;
+                    cout << "s: " << s << ",  i,j: " << i << ", " << j << endl;
+                }
             }
         }
         
@@ -188,8 +220,27 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
     
     for (int i = 0; i < hiddenLayersSize; ++i)
     {
-        w[i] += dcw[i] * 0.000001;
-        b[i] += dcb[i] * 0.000001;
+        //if (s == 141) cout << "BACK BEFOR" << i << ": " << w[i] << endl;
+        
+        for (int x = 0; x < dcw[i].size1(); ++x)
+        {
+            for (int y = 0; y < dcw[i].size2(); ++y)
+            {
+                if (dcw[i](x, y) > 1000000)  dcw[i](x, y) =  1000000;
+                if (dcw[i](x, y) < -1000000) dcw[i](x, y) = -1000000;
+            }
+        }
+        
+        for (int y = 0; y < dcb[i].size2(); ++y)
+        {
+            if (dcb[i](0, y) > 1000000)  dcb[i](0, y) =  1000000;
+            if (dcb[i](0, y) < -1000000) dcb[i](0, y) = -1000000;
+        }
+        
+        w[i] += dcw[i] * 0.01;
+        b[i] += dcb[i] * 0.01;
+        
+        //if (s == 141) cout << "BACK AFTER" << i << ": " << w[i] << endl;
     }
     
     return;
@@ -254,6 +305,8 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
 //        for (int x = 0; x < curLayer; ++x)
 //            b[i] += dcb[i];
         
+        
+        
         w[i] += dcw[i] * 0.001;
         b[i] += dcb[i] * 0.001;
         
@@ -268,23 +321,62 @@ matrix<double> NeuralNetworkManager::forward(std::vector<double> input)
     for (int i = 0; i < INPUT_NEURONS; ++i)
         in(0, i) = input[i];
     
+    if (s == 141)
+    {
+        cout << s << " W: " << w[0] << endl;
+        cout << s << " B: " << b[0] << endl;
+    }
+    
     z[0] = prod(in, w[0]);
     z[0] += b[0];
+    
+    for (int d = 0; d < z[0].size2(); ++d)
+    {
+        if (isnan(z[0](0, d)))
+        {
+            cout << s << " EARLIER PROBLEM" << endl;
+        }
+    }
+    
     a[0] = sigmoid(z[0]);
+    
+    //if (s == 142)  cout << s << " DEBUG A: " << w[0] << endl;
     
     for (int i = 1; i < hiddenLayersSize; ++i)
     {
+        //if (s == 142) cout << s << " BEFOR DEBUG A: " << i << ": " << w[i] << endl;
+        
         z[i] = prod(a[i-1], w[i]);
+        
+        //if (s == 142) cout << s << " AFTER DEBUG A: " << i << ": " << w[i] << endl;
+        
         z[i] += b[i];
         a[i] = sigmoid(z[i]);
     }
+    
+//    if (s == 142)
+//    {
+//        //cout<< "WAIT, a: " << z[hiddenLayersSize - 1] << endl;
+//        for (int i = 0; i < hiddenLayersSize; ++i)
+//        {
+//            cout << "WAIT A, " << i << ": " << a[i] << endl;
+//            cout << "WAIT Z, " << i << ": " << z[i] << endl;
+//        }
+//    }
     
     return a[hiddenLayersSize - 1];
 }
 
 double NeuralNetworkManager::sigmoid(double x)
 {
-    return 1.0 / (1.0 + exp(-x));
+    //return 1.0 / (1.0 + exp(-x));
+    double temp = 1.0 / (1.0 + exp(-x));
+    if (isnan(temp))
+    {
+        //return 1;
+        cout << s << " SIGMOID NAN: " << x << endl;
+    }
+    return temp;
 }
 
 double NeuralNetworkManager::dSigmoid(double x)
@@ -299,7 +391,13 @@ matrix<double> NeuralNetworkManager::sigmoid(matrix<double> &m)
     matrix<double> result (1, m.size2());
     
     for (int i = 0; i < m.size2(); ++i)
+    {
+        if (isnan(sigmoid(m(0, i))))
+        {
+            cout << "sigmoid_matrix_nan: " << sigmoid(m(0, i)) << endl;
+        }
         result(0, i) = sigmoid(m(0, i));
+    }
     
     return result;
 }

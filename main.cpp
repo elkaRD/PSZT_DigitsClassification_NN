@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 //    }
     {
         NeuralNetworkManager nn({20, 20});
-        for (int i = 0; i < 300; ++i)
+        for (int i = 0; i < 1420; ++i)
             nn.detectDigit({0.2, 0.6});
     }
 
