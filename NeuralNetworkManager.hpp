@@ -25,11 +25,13 @@ public:
     int detectDigitInt8(std::vector<uint8_t> image);
     
     void learn(std::vector<double> image, int expected);
+    void learnInt8(std::vector<uint8_t> image, int expected);
     
 private:
     
     const static int INPUT_NEURONS;
     const static int OUTPUT_NEURONS;
+    const static bool ENABLE_BIASES;
     
     class Layer
     {

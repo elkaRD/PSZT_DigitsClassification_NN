@@ -17,6 +17,8 @@
 
 #define MNIST_DATA_LOCATION "/Users/robert/studia/sem5/pszt/projekt2/PSZT_DigitsClassification_NN"
 
+using namespace std;
+
 int main(int argc, char* argv[]) {
     // MNIST_DATA_LOCATION set by MNIST cmake config
     //const std::string MNIST_DATA_LOCATION = std::string(argv[0]) + "/..";
@@ -42,18 +44,66 @@ int main(int argc, char* argv[]) {
             m (i, j) = 3 * i + j;
     std::cout << m << std::endl;
     
+//    cout << "BEG" << endl;
+//    cout << (int)dataset.training_labels[0] << endl;
+//    cout << "END" << endl;
+    
     //vector<int> layers = {16, 16};
     
 //    {
-//        NeuralNetworkManager nn({16, 14});
-//        for (int i = 0; i < 1; ++i)
+//        NeuralNetworkManager nn({20, 20, 20});
+//        for (int i = 0; i < 200; ++i)
 //            nn.detectDigitInt8(dataset.training_images[0]);
 //    }
     {
-        NeuralNetworkManager nn({20, 20});
-        for (int i = 0; i < 1420; ++i)
-            nn.detectDigit({0.2, 0.6});
+        NeuralNetworkManager nn({200, 100, 50});
+        
+        int correct = 0;
+        int wrong = 0;
+//        for (int i = 0; i < dataset.test_images.size(); ++i)
+//        {
+//            if (i%500 == 0) std::cout << "TESTING_BEF: " << i << "/" << dataset.test_images.size() << std::endl;
+//            int result = nn.detectDigitInt8(dataset.test_images[i]);
+//            if (result == (int)dataset.test_labels[i]) correct++;
+//            else wrong++;
+//        }
+//
+//        cout << "CORRECT: " << correct << endl;
+//        cout << "WRONG: " << wrong << endl;
+        
+        for (int j = 0; j < 200; ++j)
+        //for (int i = 0; i < dataset.training_images.size(); ++i)
+        for (int i = 0; i < 50; ++i)
+        {
+            if (i%50 == 0) std::cout << "TRAINING: " << i << "/" << dataset.training_images.size() << std::endl;
+            nn.learnInt8(dataset.training_images[i], dataset.training_labels[i]);
+            //cout << (int)dataset.training_labels[i] << endl;
+        }
+
+        correct = 0;
+        wrong = 0;
+        //for (int i = 0; i < dataset.test_images.size(); ++i)
+        for (int i = 0; i < 50; ++i)
+        {
+//            if (i%500 == 0) std::cout << "TESTING: " << i << "/" << dataset.test_images.size() << std::endl;
+//            int result = nn.detectDigitInt8(dataset.test_images[i]);
+//            if (result == dataset.test_labels[i]) correct++;
+//            else wrong++;
+            
+            if (i%500 == 0) std::cout << "TESTING: " << i << "/" << dataset.training_images.size() << std::endl;
+            int result = nn.detectDigitInt8(dataset.training_images[i]);
+            if (result == dataset.training_labels[i]) correct++;
+            else wrong++;
+        }
+
+        cout << "CORRECT: " << correct << endl;
+        cout << "WRONG: " << wrong << endl;
     }
+//    {
+//        NeuralNetworkManager nn({16, 14});
+//        for (int i = 0; i < 1420; ++i)
+//            nn.detectDigit({0.2, 0.6});
+//    }
 
     return 0;
 }

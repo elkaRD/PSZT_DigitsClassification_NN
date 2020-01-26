@@ -11,8 +11,9 @@
 #include <iostream>
 using namespace std;
 
-const int NeuralNetworkManager::INPUT_NEURONS = 2;
-const int NeuralNetworkManager::OUTPUT_NEURONS = 2;
+const int NeuralNetworkManager::INPUT_NEURONS = 28*28;
+const int NeuralNetworkManager::OUTPUT_NEURONS = 10;
+const bool NeuralNetworkManager::ENABLE_BIASES = false;
 
 NeuralNetworkManager::NeuralNetworkManager(std::vector<int> hiddenLayers)
 {
@@ -83,7 +84,10 @@ NeuralNetworkManager::NeuralNetworkManager(std::vector<int> hiddenLayers)
         
         for (int x = 0; x < curLayer; ++x)
             for (int y = 0; y < prevLayer; ++y)
-                tempW(y ,x) = randomValue() * 2.0 - 1.0;
+                if (i != hiddenLayers.size() - 1)
+                    tempW(y ,x) = randomValue() * 2.0 - 1.0;
+                else
+                    tempW(y, x) = 0;
         
         w.push_back(tempW);
         dcw.push_back(tempDcw);
@@ -111,14 +115,22 @@ int NeuralNetworkManager::detectDigit(std::vector<double> image)
     
     matrix<double> debug = forward(image);
     
+    //cout << s << " result of forward: " << debug << endl;
     
+    int maxIndex = -1;
+    double maxValue = 0;
+    for (int i = 0; i < debug.size2(); ++i)
+    {
+        if (debug(0, i) > maxValue)
+        {
+            maxValue = debug(0, i);
+            maxIndex = i;
+        }
+    }
     
+    return maxIndex;
     
-    
-    
-    cout << s << " result of forward: " << debug << endl;
-    
-    learn(image, 0);
+    //learn(image, 1);
     
     
     if (s >= 140)
@@ -150,6 +162,23 @@ int NeuralNetworkManager::detectDigitInt8(std::vector<uint8_t> image)
     return detectDigit(temp);
 }
 
+void NeuralNetworkManager::learnInt8(std::vector<uint8_t> image, int expected)
+{
+    if (expected >= OUTPUT_NEURONS) throw std::exception();
+    
+    std::vector<double> temp;
+    temp.reserve(INPUT_NEURONS);
+    
+    for (int i = 0; i < INPUT_NEURONS; ++i)
+    {
+        double d = image[i];
+        d /= 255.0;
+        temp.push_back(d);
+    }
+    
+    learn(temp, expected);
+}
+
 void NeuralNetworkManager::learn(std::vector<double> image, int expected)
 {
     matrix<double> output = forward(image);
@@ -172,15 +201,18 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
     
     for (int i = hiddenLayersSize-1; i >= 0; --i)
     {
-        for (int j = 0; j < hiddenLayers[i]; ++j)
+        if (ENABLE_BIASES)
         {
-            double temp = dcb[i](0, j);
-            dcb[i](0, j) = dSigmoid(z[i](0, j)) * dca[i](0, j);
-            if (isnan(dcb[i](0, j)) && !isnan(temp))
+            for (int j = 0; j < hiddenLayers[i]; ++j)
             {
-                cout << "DCB PROBLEM'S HERE" << endl;
-                cout << "s: " << s << ",  i,j: " << i << ", " << j << endl;
-                cout << "dsigmoid: " << dSigmoid(z[i](0, j)) << ",    dca: " << dca[i](0, j) << endl;
+                double temp = dcb[i](0, j);
+                dcb[i](0, j) = dSigmoid(z[i](0, j)) * dca[i](0, j);
+                if (isnan(dcb[i](0, j)) && !isnan(temp))
+                {
+                    cout << "DCB PROBLEM'S HERE" << endl;
+                    cout << "s: " << s << ",  i,j: " << i << ", " << j << endl;
+                    cout << "dsigmoid: " << dSigmoid(z[i](0, j)) << ",    dca: " << dca[i](0, j) << endl;
+                }
             }
         }
         
@@ -222,23 +254,27 @@ void NeuralNetworkManager::learn(std::vector<double> image, int expected)
     {
         //if (s == 141) cout << "BACK BEFOR" << i << ": " << w[i] << endl;
         
-        for (int x = 0; x < dcw[i].size1(); ++x)
-        {
-            for (int y = 0; y < dcw[i].size2(); ++y)
-            {
-                if (dcw[i](x, y) > 1000000)  dcw[i](x, y) =  1000000;
-                if (dcw[i](x, y) < -1000000) dcw[i](x, y) = -1000000;
-            }
-        }
+//        for (int x = 0; x < dcw[i].size1(); ++x)
+//        {
+//            for (int y = 0; y < dcw[i].size2(); ++y)
+//            {
+//                if (dcw[i](x, y) > 10000000)  dcw[i](x, y) =  10000000;
+//                if (dcw[i](x, y) < -10000000) dcw[i](x, y) = -10000000;
+//            }
+//        }
+//
+//        if (ENABLE_BIASES)
+//        {
+//            for (int y = 0; y < dcb[i].size2(); ++y)
+//            {
+//                if (dcb[i](0, y) > 10000000)  dcb[i](0, y) =  10000000;
+//                if (dcb[i](0, y) < -10000000) dcb[i](0, y) = -10000000;
+//            }
+//        }
         
-        for (int y = 0; y < dcb[i].size2(); ++y)
-        {
-            if (dcb[i](0, y) > 1000000)  dcb[i](0, y) =  1000000;
-            if (dcb[i](0, y) < -1000000) dcb[i](0, y) = -1000000;
-        }
-        
-        w[i] += dcw[i] * 0.01;
-        b[i] += dcb[i] * 0.01;
+        //w[i] += dcw[i];
+        //cout << dcw[i]<< endl;
+        if (ENABLE_BIASES) b[i] += dcb[i] * 0.01;
         
         //if (s == 141) cout << "BACK AFTER" << i << ": " << w[i] << endl;
     }
@@ -321,14 +357,14 @@ matrix<double> NeuralNetworkManager::forward(std::vector<double> input)
     for (int i = 0; i < INPUT_NEURONS; ++i)
         in(0, i) = input[i];
     
-    if (s == 141)
-    {
-        cout << s << " W: " << w[0] << endl;
-        cout << s << " B: " << b[0] << endl;
-    }
+//    if (s == 141)
+//    {
+//        cout << s << " W: " << w[0] << endl;
+//        cout << s << " B: " << b[0] << endl;
+//    }
     
     z[0] = prod(in, w[0]);
-    z[0] += b[0];
+    if (ENABLE_BIASES) z[0] += b[0];
     
     for (int d = 0; d < z[0].size2(); ++d)
     {
@@ -351,7 +387,10 @@ matrix<double> NeuralNetworkManager::forward(std::vector<double> input)
         //if (s == 142) cout << s << " AFTER DEBUG A: " << i << ": " << w[i] << endl;
         
         z[i] += b[i];
-        a[i] = sigmoid(z[i]);
+        if (i != hiddenLayersSize-1)
+            a[i] = sigmoid(z[i]);
+        else
+            a[i] = z[i];
     }
     
 //    if (s == 142)
@@ -381,6 +420,9 @@ double NeuralNetworkManager::sigmoid(double x)
 
 double NeuralNetworkManager::dSigmoid(double x)
 {
+    double t = pow(2.71828182845905, -x);
+    return t / ((t + 1) * (t + 1));
+    
     return x * (1.0 - x);
 }
 
