@@ -10,6 +10,7 @@
 #include <vector>
 #include "MnistReader.hpp"
 #include "NeuralNetworkManager.hpp"
+#include "DigitsNN.hpp"
 //#include "mnist/mnist_reader.hpp"
 
 #include <boost/numeric/ublas/matrix.hpp>
@@ -49,6 +50,9 @@ int main(int argc, char* argv[]) {
 //    cout << "END" << endl;
     
     //vector<int> layers = {16, 16};
+    
+    DigitsNN nn({16, 16});
+    return -1;
     
 //    {
 //        NeuralNetworkManager nn({20, 20, 20});
