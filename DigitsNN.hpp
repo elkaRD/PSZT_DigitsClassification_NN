@@ -121,7 +121,7 @@ public:
         
         for (int i = 0; i < inSize; ++i)
         {
-            for (int j = 0; j < outSize; ++j)
+            for (int j = 0; j < hiddenLayerSize[0]; ++j)
             {
                 file << w[0][j][i] << " ";
             }
@@ -133,7 +133,7 @@ public:
             {
                 for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
                 {
-                    file << w[i][k][j] << " ";
+                    file << w[i+1][k][j] << " ";
                 }
             }
             file << endl;
@@ -179,7 +179,39 @@ public:
         
         init(layers, inSize, outSize);
         
+        for (int i = 0; i < inSize; ++i)
+        {
+            for (int j = 0; j < hiddenLayerSize[0]; ++j)
+            {
+                file >> w[0][j][i];
+            }
+        }
         
+        for (int i = 0; i < hiddenLayers-1; ++i)
+        {
+            for (int j = 0; j < hiddenLayerSize[i]; ++j)
+            {
+                for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
+                {
+                    file >> w[i+1][k][j];
+                }
+            }
+        }
+        for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
+        {
+            for (int j = 0; j < outSize; ++j)
+            {
+                file >> w[hiddenLayers][j][i];
+            }
+        }
+        
+        for (int i = 0; i < hiddenLayers-1; ++i)
+        {
+            for (int j = 0; j < hiddenLayerSize[i]; ++j)
+            {
+                file >> b[i][j];
+            }
+        }
         
         file.close();
     }
@@ -216,6 +248,7 @@ private:
     std::default_random_engine randomGenerator;
     
     void init(const std::vector<int> &layerSize, const int inLayer = 28*28, const int outLayer = 10)
+    //void init(const std::vector<int> &layerSize, const int inLayer = 2, const int outLayer = 2)
     {
         a.clear();
         z.clear();
@@ -363,7 +396,7 @@ private:
             
             for (int i = 0; i < outSize; ++i)
             {
-                double expected = y == i ? 1 : 0;
+                double expected = y == i ? 10 : 0;
                 dout[i] = 2 * (out[i] - expected) * STEP_DST;
             }
             

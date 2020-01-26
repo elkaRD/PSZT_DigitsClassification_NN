@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     
     //vector<int> layers = {16, 16};
     
-    DigitsNN nn({32,32});
+    DigitsNN nn({32, 32});
     
     for (int i = 0; i < dataset.training_images.size(); ++i)
     {
@@ -75,12 +75,13 @@ int main(int argc, char* argv[]) {
 
     
     nn.test();
+    nn.load("test2.txt");
     //for (int i = 0; i < 100; ++i)
     {
         //cout << i << " iter" << endl;
-        nn.learn();
+        //nn.learn();
         nn.test();
-        nn.save("test.txt");
+        //nn.save("test2.txt");
     }
     
     return -1;
