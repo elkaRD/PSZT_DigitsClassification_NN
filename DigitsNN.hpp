@@ -13,6 +13,8 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <string>
+#include <fstream>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
@@ -22,9 +24,216 @@ class DigitsNN
 {
 public:
     
-    DigitsNN(std::vector<int> layerSize)
+    DigitsNN(const std::vector<int> &layerSize)
     {
         randomGenerator = std::default_random_engine {};
+        
+        init(layerSize);
+    }
+    
+    int recognize(const std::vector<double> &in)
+    {
+        std::vector<double> out = forward(in);
+        
+        int maxIndex = 0;
+        for (int i = 1; i < outSize; ++i)
+        {
+            if (out[i] > out[maxIndex])
+                maxIndex = i;
+        }
+        
+        return maxIndex;
+    }
+    
+    void addTraining(const std::vector<uint8_t> &data, int digit)
+    {
+        std::vector<double> t;
+        
+        for (int i = 0; i < inSize; ++i)
+            t.push_back((double)data[i] / 255.0);
+        
+        trainingData.push_back(t);
+        trainingDigit.push_back(digit);
+    }
+    
+    void addTest(const std::vector<uint8_t> &data, int digit)
+    {
+        std::vector<double> t;
+        
+        for (int i = 0; i < inSize; ++i)
+            t.push_back((double)data[i] / 255.0);
+        
+        testData.push_back(t);
+        testDigit.push_back(digit);
+    }
+    
+    void learn()
+    {
+        std::vector<int> batches;
+        for (int i = 0; i < trainingData.size(); ++i)
+        {
+            batches.push_back(i);
+        }
+        
+        std::shuffle(std::begin(batches), std::end(batches), randomGenerator);
+        
+        for (int i = 0; i < trainingData.size() / BATCH_SIZE; ++i)
+        {
+            std::vector<int> batch;
+            //std::copy(batches.begin() + (i * BATCH_SIZE), batches.begin() + ((i+1) * BATCH_SIZE), batch.begin());
+            for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
+                batch.push_back(batches[j]);
+            
+            if ((i * BATCH_SIZE) % 1000 == 0)
+                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << endl;
+            
+            backward(batch);
+        }
+    }
+    
+    void test()
+    {
+        int correct = 0;
+        
+        for (int i = 0; i < testData.size(); ++i)
+        {
+            if (recognize(testData[i]) == testDigit[i])
+            {
+                correct++;
+            }
+        }
+        
+        cout << "TEST RESULT: " << ((double) correct / testData.size()) << endl;
+    }
+    
+    void save(string filename)
+    {
+        ofstream file(filename.c_str());
+        
+        file << BATCH_SIZE << endl;
+        file << STEP_DST << endl;
+        file << hiddenLayers << endl;
+        file << inSize << endl;
+        file << outSize << endl;
+        for (int i = 0; i < hiddenLayers; ++i)
+            file << hiddenLayerSize[i] << " ";
+        file << endl;
+        
+        for (int i = 0; i < inSize; ++i)
+        {
+            for (int j = 0; j < outSize; ++j)
+            {
+                file << w[0][j][i] << " ";
+            }
+        }
+        file << endl;
+        for (int i = 0; i < hiddenLayers-1; ++i)
+        {
+            for (int j = 0; j < hiddenLayerSize[i]; ++j)
+            {
+                for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
+                {
+                    file << w[i][k][j] << " ";
+                }
+            }
+            file << endl;
+        }
+        for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
+        {
+            for (int j = 0; j < outSize; ++j)
+            {
+                file << w[hiddenLayers][j][i] << " ";
+            }
+        }
+        file << endl;
+        
+        for (int i = 0; i < hiddenLayers-1; ++i)
+        {
+            for (int j = 0; j < hiddenLayerSize[i]; ++j)
+            {
+                file << b[i][j] << " ";
+            }
+            file << endl;
+        }
+        
+        file.close();
+    }
+    
+    void load(string filename)
+    {
+        ifstream file(filename.c_str());
+        
+        file >> BATCH_SIZE;
+        file >> STEP_DST;
+        file >> hiddenLayers;
+        file >> inSize;
+        file >> outSize;
+        
+        std::vector<int> layers;
+        for (int i = 0; i < hiddenLayers; ++i)
+        {
+            int t;
+            file >> t;
+            layers.push_back(t);
+        }
+        
+        init(layers, inSize, outSize);
+        
+        
+        
+        file.close();
+    }
+    
+private:
+    //
+    const double E = 2.71828182845905;
+    int BATCH_SIZE = 100;
+    double STEP_DST = 0.03;
+    
+    std::vector<std::vector<double>> a;
+    std::vector<std::vector<double>> z;
+    std::vector<std::vector<std::vector<double>>> w;
+    std::vector<std::vector<double>> b;
+    int hiddenLayers;
+    std::vector<int> hiddenLayerSize;
+    int inSize;
+    int outSize;
+    
+    std::vector<double> dout;
+    std::vector<std::vector<double>> da;
+    std::vector<std::vector<double>> db;
+    std::vector<std::vector<std::vector<double>>> dw;
+    
+    //std::vector<std::vector<double>> gda;
+    std::vector<std::vector<double>> gdb;
+    std::vector<std::vector<std::vector<double>>> gdw;
+    
+    std::vector<std::vector<double>> trainingData;
+    std::vector<std::vector<double>> testData;
+    std::vector<int> trainingDigit;
+    std::vector<int> testDigit;
+    
+    std::default_random_engine randomGenerator;
+    
+    void init(const std::vector<int> &layerSize, const int inLayer = 28*28, const int outLayer = 10)
+    {
+        a.clear();
+        z.clear();
+        w.clear();
+        b.clear();
+        
+        hiddenLayerSize.clear();
+        
+        dout.clear();
+        da.clear();
+        db.clear();
+        dw.clear();
+        
+        gdb.clear();
+        gdw.clear();
+        
+        inSize = inLayer;
+        outSize = outLayer;
         
         hiddenLayerSize = layerSize;
         hiddenLayers = (int) layerSize.size();
@@ -91,116 +300,11 @@ public:
         
         gdw = w;
         gdb = b;
+
     }
     
-    int recognize(std::vector<double> in)
-    {
-        std::vector<double> out = forward(in);
-        
-        int maxIndex = 0;
-        for (int i = 1; i < outSize; ++i)
-        {
-            if (out[i] > out[maxIndex])
-                maxIndex = i;
-        }
-        
-        return maxIndex;
-    }
     
-    void addTraining(std::vector<uint8_t> data, int digit)
-    {
-        std::vector<double> t;
-        
-        for (int i = 0; i < inSize; ++i)
-            t.push_back((double)data[i] / 255.0);
-        
-        trainingData.push_back(t);
-        trainingDigit.push_back(digit);
-    }
-    
-    void addTest(std::vector<uint8_t> data, int digit)
-    {
-        std::vector<double> t;
-        
-        for (int i = 0; i < inSize; ++i)
-            t.push_back((double)data[i] / 255.0);
-        
-        testData.push_back(t);
-        testDigit.push_back(digit);
-    }
-    
-    void learn()
-    {
-        std::vector<int> batches;
-        for (int i = 0; i < trainingData.size(); ++i)
-        {
-            batches.push_back(i);
-        }
-        
-        std::shuffle(std::begin(batches), std::end(batches), randomGenerator);
-        
-        for (int i = 0; i < trainingData.size() / BATCH_SIZE; ++i)
-        {
-            std::vector<int> batch;
-            //std::copy(batches.begin() + (i * BATCH_SIZE), batches.begin() + ((i+1) * BATCH_SIZE), batch.begin());
-            for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
-                batch.push_back(batches[j]);
-            
-            if ((i * BATCH_SIZE) % 1000 == 0)
-                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << endl;
-            
-            backward(batch);
-        }
-    }
-    
-    void test()
-    {
-        int correct = 0;
-        
-        for (int i = 0; i < testData.size(); ++i)
-        {
-            if (recognize(testData[i]) == testDigit[i])
-            {
-                correct++;
-            }
-        }
-        
-        cout << "TEST RESULT: " << ((double) correct / testData.size()) << endl;
-    }
-    
-private:
-    //
-    const double E = 2.71828182845905;
-    const int BATCH_SIZE = 50;
-    const double STEP_DST = 0.001;
-    
-    std::vector<std::vector<double>> a;
-    std::vector<std::vector<double>> z;
-    std::vector<std::vector<std::vector<double>>> w;
-    std::vector<std::vector<double>> b;
-    int hiddenLayers;
-    std::vector<int> hiddenLayerSize;
-    int inSize = 28 * 28;
-    int outSize = 10;
-    
-    std::vector<double> dout;
-    std::vector<std::vector<double>> da;
-    std::vector<std::vector<double>> db;
-    std::vector<std::vector<std::vector<double>>> dw;
-    
-    //std::vector<std::vector<double>> gda;
-    std::vector<std::vector<double>> gdb;
-    std::vector<std::vector<std::vector<double>>> gdw;
-    
-    std::vector<std::vector<double>> trainingData;
-    std::vector<std::vector<double>> testData;
-    std::vector<int> trainingDigit;
-    std::vector<int> testDigit;
-    
-    std::default_random_engine randomGenerator;
-    
-    
-    std::vector<double> forward(std::vector<double> in)
+    std::vector<double> forward(const std::vector<double> &in)
     {
         for (int i = 0; i < hiddenLayerSize[0]; ++i)
         {
@@ -240,7 +344,7 @@ private:
         return out;
     }
     
-    void backward(std::vector<int> batch)
+    void backward(std::vector<int> &batch)
     {
         for (auto &it : gdw)
             for (auto &it2 : it)

@@ -51,34 +51,36 @@ int main(int argc, char* argv[]) {
     
     //vector<int> layers = {16, 16};
     
-    DigitsNN nn({32,32,32});
+    DigitsNN nn({32,32});
     
-//    for (int i = 0; i < dataset.training_images.size(); ++i)
-//    {
-//        nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
-//    }
+    for (int i = 0; i < dataset.training_images.size(); ++i)
+    {
+        nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
+    }
+
+    for (int i = 0; i < dataset.test_images.size(); ++i)
+    {
+        nn.addTest(dataset.test_images[i], dataset.test_labels[i]);
+    }
+    
+//        for (int i = 0; i < 500; ++i)
+//        {
+//            nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
+//        }
 //
-//    for (int i = 0; i < dataset.test_images.size(); ++i)
-//    {
-//        nn.addTest(dataset.test_images[i], dataset.test_labels[i]);
-//    }
-    
-        for (int i = 0; i < 50; ++i)
-        {
-            nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
-        }
-    
-        for (int i = 0; i < 50; ++i)
-        {
-            nn.addTest(dataset.training_images[i], dataset.training_labels[i]);
-        }
+//        for (int i = 0; i < 500; ++i)
+//        {
+//            nn.addTest(dataset.training_images[i], dataset.training_labels[i]);
+//        }
 
     
     nn.test();
-    for (int i = 0; i < 1000; ++i)
+    //for (int i = 0; i < 100; ++i)
     {
+        //cout << i << " iter" << endl;
         nn.learn();
         nn.test();
+        nn.save("test.txt");
     }
     
     return -1;
