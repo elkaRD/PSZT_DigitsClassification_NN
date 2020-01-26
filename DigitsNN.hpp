@@ -86,6 +86,11 @@ public:
         dw = w;
         db = b;
         da = a;
+        
+        z = a;
+        
+        gdw = w;
+        gdb = b;
     }
     
     int recognize(std::vector<double> in)
@@ -134,18 +139,40 @@ public:
         
         std::shuffle(std::begin(batches), std::end(batches), randomGenerator);
         
-        for (int i = 0; i < trainingData.size() / BATCH_SIZE - 1; ++i)
+        for (int i = 0; i < trainingData.size() / BATCH_SIZE; ++i)
         {
             std::vector<int> batch;
-            std::copy(batches.begin() + (i * BATCH_SIZE), batches.begin() + ((i+1) * BATCH_SIZE), batch.begin());
+            //std::copy(batches.begin() + (i * BATCH_SIZE), batches.begin() + ((i+1) * BATCH_SIZE), batch.begin());
+            for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
+                batch.push_back(batches[j]);
+            
+            if ((i * BATCH_SIZE) % 1000 == 0)
+                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << endl;
+            
             backward(batch);
         }
+    }
+    
+    void test()
+    {
+        int correct = 0;
+        
+        for (int i = 0; i < testData.size(); ++i)
+        {
+            if (recognize(testData[i]) == testDigit[i])
+            {
+                correct++;
+            }
+        }
+        
+        cout << "TEST RESULT: " << ((double) correct / testData.size()) << endl;
     }
     
 private:
     //
     const double E = 2.71828182845905;
-    const int BATCH_SIZE = 100;
+    const int BATCH_SIZE = 50;
+    const double STEP_DST = 0.001;
     
     std::vector<std::vector<double>> a;
     std::vector<std::vector<double>> z;
@@ -161,7 +188,7 @@ private:
     std::vector<std::vector<double>> db;
     std::vector<std::vector<std::vector<double>>> dw;
     
-    std::vector<std::vector<double>> gda;
+    //std::vector<std::vector<double>> gda;
     std::vector<std::vector<double>> gdb;
     std::vector<std::vector<std::vector<double>>> gdw;
     
@@ -215,48 +242,103 @@ private:
     
     void backward(std::vector<int> batch)
     {
+        for (auto &it : gdw)
+            for (auto &it2 : it)
+                for (auto &it3 : it2)
+                    it3 = 0;
         
+        for (auto &it : gdb)
+            for (auto &it2 : it)
+                it2 = 0;
         
-        std::vector<double> in;
-        int y = 0;
-        std::vector<double> out = forward(in);
-        
-        for (int i = 0; i < outSize; ++i)
+        for (int i = 0; i < batch.size(); ++i)
         {
-            double expected = y == i ? 1 : 0;
-            dout[i] = 2 * (out[i] - expected);
-        }
-        
-        for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
-        {
-            da[hiddenLayers-1][i] = 0;
-            for (int j = 0; j < outSize; ++j)
+            std::vector<double> in = trainingData[batch[i]];
+            int y = trainingDigit[batch[i]];
+            std::vector<double> out = forward(in);
+            
+            for (int i = 0; i < outSize; ++i)
             {
-                dw[hiddenLayers][j][i] = dout[j] * a[hiddenLayers-1][i];
-                da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                double expected = y == i ? 1 : 0;
+                dout[i] = 2 * (out[i] - expected) * STEP_DST;
             }
-        }
-        
-        for (int i = 0; i < hiddenLayers-1; ++i)
-        {
-            for (int j = 0; j < hiddenLayerSize[i]; ++j)
+            
+            for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
             {
-                da[i][j] = 0;
-                for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
+                da[hiddenLayers-1][i] = 0;
+                for (int j = 0; j < outSize; ++j)
                 {
-                    da[i][j] += da[i+1][k] * dSigmoid(z[i+1][k]) * w[i+1][k][j];
-                    dw[i+1][k][j] = da[i+1][k] * dSigmoid(z[i+1][k]) * a[i][j];
+                    dw[hiddenLayers][j][i] = dout[j] * a[hiddenLayers-1][i];
+                    da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                }
+            }
+            
+            for (int i = 0; i < hiddenLayers-1; ++i)
+            {
+                for (int j = 0; j < hiddenLayerSize[i]; ++j)
+                {
+                    da[i][j] = 0;
+                    for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
+                    {
+                        da[i][j] += da[i+1][k] * dSigmoid(z[i+1][k]) * w[i+1][k][j];
+                        dw[i+1][k][j] = da[i+1][k] * dSigmoid(z[i+1][k]) * a[i][j];
+                    }
+                }
+            }
+            
+            for (int i = 0; i < inSize; ++i)
+            {
+                for (int j = 0; j < hiddenLayerSize[0]; ++j)
+                {
+                    dw[0][j][i] = da[0][j] * dSigmoid(z[0][j]) * in[i];
+                }
+            }
+            
+            for (int i = 0; i < dw.size(); ++i)
+            {
+                for (int j = 0; j < dw[i].size(); ++j)
+                {
+                    for (int k = 0; k < dw[i][j].size(); ++k)
+                    {
+                        gdw[i][j][k] += dw[i][j][k];
+                    }
+                }
+            }
+            
+            for (int i = 0; i < db.size(); ++i)
+            {
+                for (int j = 0; j < db[i].size(); ++j)
+                {
+                    gdb[i][j] += db[i][j];
                 }
             }
         }
         
-        for (int i = 0; i < inSize; ++i)
+        //cout << "W: ";
+        for (int i = 0; i < gdw.size(); ++i)
         {
-            for (int j = 0; j < hiddenLayerSize[0]; ++j)
+            for (int j = 0; j < gdw[i].size(); ++j)
             {
-                dw[0][j][i] = da[0][j] * dSigmoid(z[0][j]) * in[i];
+                for (int k = 0; k < gdw[i][j].size(); ++k)
+                {
+                    gdw[i][j][k] /= BATCH_SIZE;
+                    w[i][j][k] -= gdw[i][j][k];
+                    //cout << ", " << w[i][j][k];
+                }
             }
         }
+        
+        //cout << endl << endl << "B: ";
+        for (int i = 0; i < gdb.size(); ++i)
+        {
+            for (int j = 0; j < gdb[i].size(); ++j)
+            {
+                gdb[i][j] /= BATCH_SIZE;
+                b[i][j] -= gdb[i][j];
+                //cout << ", " << gdb[i][j];
+            }
+        }
+        //cout << endl << endl;
     }
     
     inline double sigmoid(double x)

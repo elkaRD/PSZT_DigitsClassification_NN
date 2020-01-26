@@ -51,7 +51,36 @@ int main(int argc, char* argv[]) {
     
     //vector<int> layers = {16, 16};
     
-    DigitsNN nn({16, 16});
+    DigitsNN nn({32,32,32});
+    
+//    for (int i = 0; i < dataset.training_images.size(); ++i)
+//    {
+//        nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
+//    }
+//
+//    for (int i = 0; i < dataset.test_images.size(); ++i)
+//    {
+//        nn.addTest(dataset.test_images[i], dataset.test_labels[i]);
+//    }
+    
+        for (int i = 0; i < 50; ++i)
+        {
+            nn.addTraining(dataset.training_images[i], dataset.training_labels[i]);
+        }
+    
+        for (int i = 0; i < 50; ++i)
+        {
+            nn.addTest(dataset.training_images[i], dataset.training_labels[i]);
+        }
+
+    
+    nn.test();
+    for (int i = 0; i < 1000; ++i)
+    {
+        nn.learn();
+        nn.test();
+    }
+    
     return -1;
     
 //    {
