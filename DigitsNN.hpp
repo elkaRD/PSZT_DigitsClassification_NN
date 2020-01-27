@@ -216,6 +216,36 @@ public:
         file.close();
     }
     
+    int recognize(string filename)
+    {
+        FILE *file = fopen(filename.c_str(), "rb");
+        
+        char data[28*28];
+        fread(data, sizeof(char), 28*28, file);
+        
+        fclose(file);
+        
+        std::vector<double> image;
+        
+        for (int i = 0; i < 28*28; ++i)
+        {
+            image.push_back((double) data[i] / 255.0);
+        }
+        
+        char temp[28*28];
+        for (int i = 0; i < 28*28; ++i)
+        {
+            //cout << trainingData[0][i] << " ";
+            temp [i] = testData[0][i] * 255;
+        }
+        
+        FILE *f2 = fopen("test0.data", "wb");
+        fwrite(temp, sizeof(char), 28*28, f2);
+        fclose(f2);
+        
+        return recognize(image);
+    }
+    
 private:
     //
     const double E = 2.71828182845905;

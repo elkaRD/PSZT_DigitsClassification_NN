@@ -75,14 +75,16 @@ int main(int argc, char* argv[]) {
 
     
     nn.test();
-    nn.load("test2.txt");
-    //for (int i = 0; i < 100; ++i)
+    nn.load("32_32.txt");
+    //for (int i = 0; i < 10; ++i)
     {
         //cout << i << " iter" << endl;
         //nn.learn();
         nn.test();
-        //nn.save("test2.txt");
+        //nn.save("32_32.txt");
     }
+    
+    cout << "Image: " << nn.recognize("digit.data") << endl;
     
     return -1;
     
