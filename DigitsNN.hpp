@@ -218,6 +218,8 @@ public:
         }
         
         file.close();
+        
+        //STEP_DST *= 0.6;
     }
     
     int recognize(string filename, bool showPercentage = false)
@@ -255,6 +257,9 @@ private:
     int outSize;
     
     std::vector<double> dout;
+    std::vector<double> zout;
+    std::vector<double> bout;
+    
     std::vector<std::vector<double>> da;
     std::vector<std::vector<double>> db;
     std::vector<std::vector<std::vector<double>>> dw;
@@ -279,6 +284,9 @@ private:
         hiddenLayerSize.clear();
         
         dout.clear();
+        zout.clear();
+        bout.clear();
+        
         da.clear();
         db.clear();
         dw.clear();
@@ -346,6 +354,9 @@ private:
             dout.push_back(0);
         }
         
+        zout = dout;
+        bout = dout;
+        
         dw = w;
         db = b;
         da = a;
@@ -388,11 +399,12 @@ private:
         
         for (int i = 0; i < outSize; ++i)
         {
-            out[i] = 0;
+            zout[i] = bout[i];
             for (int j = 0; j < hiddenLayerSize[lastLayer]; ++j)
             {
-                out[i] += w[lastLayer+1][i][j] * a[lastLayer][j];
+                zout[i] += w[lastLayer+1][i][j] * a[lastLayer][j];
             }
+            out[i] = sigmoid(zout[i]);
         }
         
         return out;
@@ -427,7 +439,8 @@ private:
                 for (int j = 0; j < outSize; ++j)
                 {
                     dw[hiddenLayers][j][i] = dout[j] * a[hiddenLayers-1][i];
-                    da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                    //da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                    da[hiddenLayers-1][i] += dout[j] * dSigmoid(zout[j]) * w[hiddenLayers][j][i];
                 }
                 db[hiddenLayers-1][i] = da[hiddenLayers-1][i] * dSigmoid(z[hiddenLayers-1][i]);
             }
