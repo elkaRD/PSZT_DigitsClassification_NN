@@ -15,8 +15,7 @@
 #include <random>
 #include <string>
 #include <fstream>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/io.hpp>
+#include <iostream>
 
 using namespace std;
 
@@ -31,9 +30,13 @@ public:
         init(layerSize);
     }
     
-    int recognize(const std::vector<double> &in)
+    int recognize(const std::vector<double> &in, bool showPercentage = false)
     {
         std::vector<double> out = forward(in);
+        
+        if (showPercentage)
+            for (int i = 0; i < 10; ++i)
+                cout << " " << i << ": " << out[i] << endl;
         
         int maxIndex = 0;
         for (int i = 1; i < outSize; ++i)
@@ -80,7 +83,7 @@ public:
         for (int i = 0; i < trainingData.size() / BATCH_SIZE; ++i)
         {
             std::vector<int> batch;
-            //std::copy(batches.begin() + (i * BATCH_SIZE), batches.begin() + ((i+1) * BATCH_SIZE), batch.begin());
+
             for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
                 batch.push_back(batches[j]);
             
@@ -216,7 +219,7 @@ public:
         file.close();
     }
     
-    int recognize(string filename)
+    int recognize(string filename, bool showPercentage = false)
     {
         FILE *file = fopen(filename.c_str(), "rb");
         
@@ -232,7 +235,7 @@ public:
             image.push_back((double) data[i] / 255.0);
         }
         
-        return recognize(image);
+        return recognize(image, showPercentage);
     }
     
 private:

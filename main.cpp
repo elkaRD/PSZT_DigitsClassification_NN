@@ -11,10 +11,7 @@
 #include "MnistReader.hpp"
 #include "DigitsNN.hpp"
 
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/io.hpp>
-
-#define MNIST_DATA_LOCATION "/Users/robert/studia/sem5/pszt/projekt2/PSZT_DigitsClassification_NN"
+#define MNIST_DATA_LOCATION "./"
 
 using namespace std;
 
@@ -29,13 +26,6 @@ int main(int argc, char* argv[])
     std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
     std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
     std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
-    
-    using namespace boost::numeric::ublas;
-    matrix<double> m (3, 3);
-    for (unsigned i = 0; i < m.size1 (); ++ i)
-        for (unsigned j = 0; j < m.size2 (); ++ j)
-            m (i, j) = 3 * i + j;
-    std::cout << m << std::endl;
     
     DigitsNN nn({32, 32});
     
@@ -59,7 +49,7 @@ int main(int argc, char* argv[])
         //nn.save("32_32.txt");
     }
     
-    cout << "Image: " << nn.recognize("digit.data") << endl;
+    cout << "Image: " << nn.recognize("digit.data", true) << endl;
     
     return 0;
 }
