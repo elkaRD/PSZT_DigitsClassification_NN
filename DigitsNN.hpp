@@ -88,10 +88,11 @@ public:
                 batch.push_back(batches[j]);
             
             if ((i * BATCH_SIZE) % 1000 == 0)
-                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << endl;
+                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << " ";
             
             backward(batch);
         }
+        cout << endl;
     }
     
     void test()
@@ -428,9 +429,23 @@ private:
                     dw[hiddenLayers][j][i] = dout[j] * a[hiddenLayers-1][i];
                     da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
                 }
+                db[hiddenLayers-1][i] = da[hiddenLayers-1][i] * dSigmoid(z[hiddenLayers-1][i]);
             }
             
-            for (int i = 0; i < hiddenLayers-1; ++i)
+            //START
+//            for (int i = 0; i < hiddenLayers-1; ++i)
+//            {
+//                for (int j = 0; j < hiddenLayerSize[i]; ++j)
+//                {
+//                    da[i][j] = 0;
+//                    for (int k = 0; k < hiddenLayerSize[i+1]; ++k)
+//                    {
+//                        da[i][j] += da[i+1][k] * dSigmoid(z[i+1][k]) * w[i+1][k][j];
+//                        dw[i+1][k][j] = da[i+1][k] * dSigmoid(z[i+1][k]) * a[i][j];
+//                    }
+//                }
+//            }
+            for (int i = hiddenLayers-2; i >= 0; --i)
             {
                 for (int j = 0; j < hiddenLayerSize[i]; ++j)
                 {
@@ -440,8 +455,11 @@ private:
                         da[i][j] += da[i+1][k] * dSigmoid(z[i+1][k]) * w[i+1][k][j];
                         dw[i+1][k][j] = da[i+1][k] * dSigmoid(z[i+1][k]) * a[i][j];
                     }
+                    //db[hiddenLayers-1][i] = da[hiddenLayers-1][i] * dSigmoid(z[hiddenLayers-1][i]);
+                    db[i][j] = da[i][j] * dSigmoid(z[i][j]);
                 }
             }
+            //STOP
             
             for (int i = 0; i < inSize; ++i)
             {
