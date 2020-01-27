@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
         nn.addTest(dataset.test_images[i], dataset.test_labels[i]);
     }
     
-    nn.test();
+    //nn.test();
     nn.load("32_32_biases.txt");
     //for (int i = 0; i < 10; ++i)
     {

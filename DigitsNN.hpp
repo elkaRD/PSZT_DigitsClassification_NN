@@ -151,7 +151,7 @@ public:
         }
         file << endl;
         
-        for (int i = 0; i < hiddenLayers-1; ++i)
+        for (int i = 0; i < hiddenLayers; ++i)
         {
             for (int j = 0; j < hiddenLayerSize[i]; ++j)
             {
@@ -209,7 +209,7 @@ public:
             }
         }
         
-        for (int i = 0; i < hiddenLayers-1; ++i)
+        for (int i = 0; i < hiddenLayers; ++i)
         {
             for (int j = 0; j < hiddenLayerSize[i]; ++j)
             {
