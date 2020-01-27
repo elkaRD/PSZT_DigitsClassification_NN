@@ -232,17 +232,6 @@ public:
             image.push_back((double) data[i] / 255.0);
         }
         
-        char temp[28*28];
-        for (int i = 0; i < 28*28; ++i)
-        {
-            //cout << trainingData[0][i] << " ";
-            temp [i] = testData[0][i] * 255;
-        }
-        
-        FILE *f2 = fopen("test0.data", "wb");
-        fwrite(temp, sizeof(char), 28*28, f2);
-        fclose(f2);
-        
         return recognize(image);
     }
     
@@ -266,7 +255,6 @@ private:
     std::vector<std::vector<double>> db;
     std::vector<std::vector<std::vector<double>>> dw;
     
-    //std::vector<std::vector<double>> gda;
     std::vector<std::vector<double>> gdb;
     std::vector<std::vector<std::vector<double>>> gdw;
     
@@ -278,7 +266,6 @@ private:
     std::default_random_engine randomGenerator;
     
     void init(const std::vector<int> &layerSize, const int inLayer = 28*28, const int outLayer = 10)
-    //void init(const std::vector<int> &layerSize, const int inLayer = 2, const int outLayer = 2)
     {
         a.clear();
         z.clear();
@@ -481,7 +468,6 @@ private:
             }
         }
         
-        //cout << "W: ";
         for (int i = 0; i < gdw.size(); ++i)
         {
             for (int j = 0; j < gdw[i].size(); ++j)
@@ -490,22 +476,18 @@ private:
                 {
                     gdw[i][j][k] /= BATCH_SIZE;
                     w[i][j][k] -= gdw[i][j][k];
-                    //cout << ", " << w[i][j][k];
                 }
             }
         }
         
-        //cout << endl << endl << "B: ";
         for (int i = 0; i < gdb.size(); ++i)
         {
             for (int j = 0; j < gdb[i].size(); ++j)
             {
                 gdb[i][j] /= BATCH_SIZE;
                 b[i][j] -= gdb[i][j];
-                //cout << ", " << gdb[i][j];
             }
         }
-        //cout << endl << endl;
     }
     
     inline double sigmoid(double x)
