@@ -87,15 +87,19 @@ public:
             for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
                 batch.push_back(batches[j]);
             
-            if ((i * BATCH_SIZE) % 1000 == 0)
-                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << " ";
+            if ((i * BATCH_SIZE) % 6000 == 0)
+                cout << (i * BATCH_SIZE) << " / " << trainingData.size() << endl;
             
             backward(batch);
         }
+        iterCounter++;
+        
         cout << endl;
     }
     
-    void test()
+    std::vector<double> prevCorrectness;
+    
+    double test()
     {
         int correct = 0;
         
@@ -107,7 +111,37 @@ public:
             }
         }
         
-        cout << "TEST RESULT: " << ((double) correct / testData.size()) << endl;
+        double correctness = (double) correct / testData.size();
+        
+        if (enableDynamicStep)
+        {
+            if (prevCorrectness.size() >= 8)
+            {
+                double t = 0;
+                
+                for (int i = 0; i < 8; ++i)
+                {
+                    t += prevCorrectness[i];
+                }
+                t /= 8.0;
+                
+                prevCorrectness.erase(prevCorrectness.begin());
+                
+                if (abs(correctness - t) < 0.01)
+                {
+                    STEP_DST *= 0.7;
+                    cout << "Set STEP_DST to " << STEP_DST << endl;
+                    
+                    prevCorrectness.clear();
+                }
+            }
+
+            prevCorrectness.push_back(correctness);
+        }
+        
+        cout << "TEST RESULT: " << correctness << endl;
+        
+        return correctness;
     }
     
     void save(string filename)
@@ -158,6 +192,13 @@ public:
                 file << b[i][j] << " ";
             }
             file << endl;
+        }
+        
+        file << iterCounter << endl;
+        
+        for (int i = 0; i < outSize; ++i)
+        {
+            file << bout[i] << " ";
         }
         
         file.close();
@@ -217,6 +258,13 @@ public:
             }
         }
         
+        file >> iterCounter;
+        
+        for (int i = 0; i < outSize; ++i)
+        {
+            file >> bout[i];
+        }
+        
         file.close();
         
         //STEP_DST *= 0.6;
@@ -241,11 +289,29 @@ public:
         return recognize(image, showPercentage);
     }
     
+    void setStep(double newStep)
+    {
+        STEP_DST = newStep;
+    }
+    
+    void setEnableDynamicStep(bool enabled)
+    {
+        enableDynamicStep = enabled;
+    }
+    
+    int getIterCounter()
+    {
+        return iterCounter;
+    }
+    
 private:
     //
     const double E = 2.71828182845905;
     int BATCH_SIZE = 100;
     double STEP_DST = 0.03;
+    bool enableDynamicStep = true;
+    
+    int iterCounter = 0;
     
     std::vector<std::vector<double>> a;
     std::vector<std::vector<double>> z;
