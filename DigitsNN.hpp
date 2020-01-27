@@ -362,10 +362,10 @@ private:
     {
         for (int i = 0; i < hiddenLayerSize[0]; ++i)
         {
-            z[0][i] = 0;
+            z[0][i] = b[0][i];
             for (int j = 0; j < inSize; ++j)
             {
-                z[0][i] += w[0][i][j] * in[j] + b[0][i];
+                z[0][i] += w[0][i][j] * in[j];
             }
             a[0][i] = sigmoid(z[0][i]);
         }
@@ -374,10 +374,10 @@ private:
         {
             for (int j = 0; j < hiddenLayerSize[i]; ++j)
             {
-                z[i][j] = 0;
+                z[i][j] = b[i][j];
                 for (int k = 0; k < hiddenLayerSize[i-1]; ++k)
                 {
-                    z[i][j] += w[i][j][k] * a[i-1][k] + b[i][j];
+                    z[i][j] += w[i][j][k] * a[i-1][k];
                 }
                 a[i][j] = sigmoid(z[i][j]);
             }
