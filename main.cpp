@@ -39,14 +39,14 @@ int main(int argc, char* argv[])
         nn.addTest(dataset.test_images[i], dataset.test_labels[i]);
     }
     
-    nn.test();
-    //nn.load("32_32_ver2.txt");
-    //for (int i = 0; i < 10; ++i)
+    //nn.test();
+    nn.load("32_32_ver2.txt");
+    //for (int i = 0; i < 5; ++i)
     {
         //cout << i << " iter" << endl;
-        nn.learn();
+        //nn.learn();
         nn.test();
-        nn.save("32_32_ver2.txt");
+        //nn.save("32_32_ver2.txt");
     }
     
     cout << "Image: " << nn.recognize("digit.data", true) << endl;

@@ -259,6 +259,7 @@ private:
     std::vector<double> dout;
     std::vector<double> zout;
     std::vector<double> bout;
+    std::vector<double> dbout;
     
     std::vector<std::vector<double>> da;
     std::vector<std::vector<double>> db;
@@ -356,6 +357,7 @@ private:
         
         zout = dout;
         bout = dout;
+        dbout = bout;
         
         dw = w;
         db = b;
@@ -373,10 +375,10 @@ private:
     {
         for (int i = 0; i < hiddenLayerSize[0]; ++i)
         {
-            z[0][i] = 0;
+            z[0][i] = b[0][i];
             for (int j = 0; j < inSize; ++j)
             {
-                z[0][i] += w[0][i][j] * in[j] + b[0][i];
+                z[0][i] += w[0][i][j] * in[j];
             }
             a[0][i] = sigmoid(z[0][i]);
         }
@@ -385,10 +387,10 @@ private:
         {
             for (int j = 0; j < hiddenLayerSize[i]; ++j)
             {
-                z[i][j] = 0;
+                z[i][j] = b[i][j];
                 for (int k = 0; k < hiddenLayerSize[i-1]; ++k)
                 {
-                    z[i][j] += w[i][j][k] * a[i-1][k] + b[i][j];
+                    z[i][j] += w[i][j][k] * a[i-1][k];
                 }
                 a[i][j] = sigmoid(z[i][j]);
             }
@@ -429,8 +431,9 @@ private:
             
             for (int i = 0; i < outSize; ++i)
             {
-                double expected = y == i ? 10 : 0;
+                double expected = y == i ? 1 : 0;
                 dout[i] = 2 * (out[i] - expected) * STEP_DST;
+                dbout[i] = dout[i] * dSigmoid(zout[i]);
             }
             
             for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
@@ -521,6 +524,11 @@ private:
                 gdb[i][j] /= BATCH_SIZE;
                 b[i][j] -= gdb[i][j];
             }
+        }
+        
+        for (int i = 0 ; i < outSize; ++i)
+        {
+            bout[i] -= dbout[i];
         }
     }
     
