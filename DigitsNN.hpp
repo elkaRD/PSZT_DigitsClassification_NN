@@ -87,15 +87,19 @@ public:
             for (int j = i * BATCH_SIZE; j < (i+1) * BATCH_SIZE; ++j)
                 batch.push_back(batches[j]);
             
-            if ((i * BATCH_SIZE) % 1000 == 0)
-                cout << "learning from " << (i * BATCH_SIZE) << " - " <<  (i+1) * BATCH_SIZE << " ";
+            if ((i * BATCH_SIZE) % 6000 == 0)
+                cout << (i * BATCH_SIZE) << " / " << trainingData.size() << endl;
             
             backward(batch);
         }
+        iterCounter++;
+        
         cout << endl;
     }
     
-    void test()
+    std::vector<double> prevCorrectness;
+    
+    double test()
     {
         int correct = 0;
         
@@ -107,7 +111,37 @@ public:
             }
         }
         
-        cout << "TEST RESULT: " << ((double) correct / testData.size()) << endl;
+        double correctness = (double) correct / testData.size();
+        
+        if (enableDynamicStep)
+        {
+            if (prevCorrectness.size() >= 8)
+            {
+                double t = 0;
+                
+                for (int i = 0; i < 8; ++i)
+                {
+                    t += prevCorrectness[i];
+                }
+                t /= 8.0;
+                
+                prevCorrectness.erase(prevCorrectness.begin());
+                
+                if (abs(correctness - t) < 0.01)
+                {
+                    STEP_DST *= 0.7;
+                    cout << "Set STEP_DST to " << STEP_DST << endl;
+                    
+                    prevCorrectness.clear();
+                }
+            }
+
+            prevCorrectness.push_back(correctness);
+        }
+        
+        cout << "TEST RESULT: " << correctness << endl;
+        
+        return correctness;
     }
     
     void save(string filename)
@@ -158,6 +192,13 @@ public:
                 file << b[i][j] << " ";
             }
             file << endl;
+        }
+        
+        file << iterCounter << endl;
+        
+        for (int i = 0; i < outSize; ++i)
+        {
+            file << bout[i] << " ";
         }
         
         file.close();
@@ -217,7 +258,16 @@ public:
             }
         }
         
+        file >> iterCounter;
+        
+        for (int i = 0; i < outSize; ++i)
+        {
+            file >> bout[i];
+        }
+        
         file.close();
+        
+        //STEP_DST *= 0.6;
     }
     
     int recognize(string filename, bool showPercentage = false)
@@ -239,11 +289,29 @@ public:
         return recognize(image, showPercentage);
     }
     
+    void setStep(double newStep)
+    {
+        STEP_DST = newStep;
+    }
+    
+    void setEnableDynamicStep(bool enabled)
+    {
+        enableDynamicStep = enabled;
+    }
+    
+    int getIterCounter()
+    {
+        return iterCounter;
+    }
+    
 private:
     //
     const double E = 2.71828182845905;
     int BATCH_SIZE = 100;
     double STEP_DST = 0.03;
+    bool enableDynamicStep = true;
+    
+    int iterCounter = 0;
     
     std::vector<std::vector<double>> a;
     std::vector<std::vector<double>> z;
@@ -255,6 +323,10 @@ private:
     int outSize;
     
     std::vector<double> dout;
+    std::vector<double> zout;
+    std::vector<double> bout;
+    std::vector<double> dbout;
+    
     std::vector<std::vector<double>> da;
     std::vector<std::vector<double>> db;
     std::vector<std::vector<std::vector<double>>> dw;
@@ -279,6 +351,9 @@ private:
         hiddenLayerSize.clear();
         
         dout.clear();
+        zout.clear();
+        bout.clear();
+        
         da.clear();
         db.clear();
         dw.clear();
@@ -346,6 +421,10 @@ private:
             dout.push_back(0);
         }
         
+        zout = dout;
+        bout = dout;
+        dbout = bout;
+        
         dw = w;
         db = b;
         da = a;
@@ -388,11 +467,12 @@ private:
         
         for (int i = 0; i < outSize; ++i)
         {
-            out[i] = 0;
+            zout[i] = bout[i];
             for (int j = 0; j < hiddenLayerSize[lastLayer]; ++j)
             {
-                out[i] += w[lastLayer+1][i][j] * a[lastLayer][j];
+                zout[i] += w[lastLayer+1][i][j] * a[lastLayer][j];
             }
+            out[i] = sigmoid(zout[i]);
         }
         
         return out;
@@ -417,8 +497,9 @@ private:
             
             for (int i = 0; i < outSize; ++i)
             {
-                double expected = y == i ? 10 : 0;
+                double expected = y == i ? 1 : 0;
                 dout[i] = 2 * (out[i] - expected) * STEP_DST;
+                dbout[i] = dout[i] * dSigmoid(zout[i]);
             }
             
             for (int i = 0; i < hiddenLayerSize[hiddenLayers-1]; ++i)
@@ -427,7 +508,8 @@ private:
                 for (int j = 0; j < outSize; ++j)
                 {
                     dw[hiddenLayers][j][i] = dout[j] * a[hiddenLayers-1][i];
-                    da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                    //da[hiddenLayers-1][i] += dout[j] * w[hiddenLayers][j][i];
+                    da[hiddenLayers-1][i] += dout[j] * dSigmoid(zout[j]) * w[hiddenLayers][j][i];
                 }
                 db[hiddenLayers-1][i] = da[hiddenLayers-1][i] * dSigmoid(z[hiddenLayers-1][i]);
             }
@@ -508,6 +590,11 @@ private:
                 gdb[i][j] /= BATCH_SIZE;
                 b[i][j] -= gdb[i][j];
             }
+        }
+        
+        for (int i = 0 ; i < outSize; ++i)
+        {
+            bout[i] -= dbout[i];
         }
     }
     
